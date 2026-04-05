@@ -47,7 +47,7 @@ If you modify the strategy logic or parameters, regenerate the pickle:
 
 ```bash
 # Requires additional libraries for the computation step
-pip install vectorbt quantstats empyrical yfinance
+pip install vectorbt quantstats yfinance
 python precompute.py
 ```
 
@@ -82,7 +82,7 @@ btc-bb-app/
 - **Pandas / NumPy** — Data manipulation
 - **VectorBT** — Backtesting engine (precompute only)
 - **QuantStats** — CAGR calculation (precompute only)
-- **empyrical** — Alpha/Beta CAPM (precompute only)
+- **src/capm.py** — Alpha/Beta CAPM (same math as legacy empyrical; no extra package)
 
 ## Data
 

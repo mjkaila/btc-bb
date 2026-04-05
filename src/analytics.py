@@ -2,14 +2,15 @@
 Metrics computation and trade extraction.
 
 Uses VBT pf.stats() as the primary source. CAGR from QuantStats,
-Alpha/Beta from empyrical, W/L Ratio and E[R] are custom-calculated.
+Alpha/Beta from src.capm (empyrical-equivalent), W/L Ratio and E[R] are custom.
 """
 
 import math
 import numpy as np
 import pandas as pd
-import empyrical
 import quantstats as qs
+
+from src.capm import capm_alpha, capm_beta
 
 PERIODS = 365  # crypto annualisation
 
@@ -45,9 +46,9 @@ def compute_metrics(pf, close_price: pd.Series) -> dict:
     # QuantStats
     cagr = _safe(float(qs.stats.cagr(strat_returns, rf=0.0, periods=PERIODS)) * 100)
 
-    # Empyrical
-    alpha = _safe(float(empyrical.alpha(strat_returns, bh_returns, period="daily")) * 100)
-    beta = _safe(float(empyrical.beta(strat_returns, bh_returns)), 3)
+    # CAPM (same formulas as empyrical; avoids unmaintained empyrical on Py3.14+)
+    alpha = _safe(float(capm_alpha(strat_returns, bh_returns, annualization=252)) * 100)
+    beta = _safe(float(capm_beta(strat_returns, bh_returns)), 3)
 
     # Custom
     if num_trades > 0:
