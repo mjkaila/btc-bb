@@ -7,7 +7,7 @@ Dark theme, 1920×1080 design target.
 Stop loss: fixed at Low[T]. Entry filter: Open[T+1] > Low[T].
 """
 
-import pickle, math
+import pickle, math, re
 from pathlib import Path
 
 import numpy as np
@@ -75,7 +75,49 @@ def load_faq():
 
 @st.cache_resource
 def load_tooltips():
-    return _parse_md_sections(TOOLTIPS_PATH)
+    tips = _parse_md_sections(TOOLTIPS_PATH)
+    tips.update(_parse_faq_metric_definitions(FAQ_PATH))
+    return tips
+
+
+def _normalize_metric_tooltip_key(metric_name: str) -> str:
+    mapping = {
+        "Strategy Return (%)": "Strategy Return %",
+        "Benchmark Return (%)": "Benchmark Return %",
+        "CAGR (%)": "CAGR %",
+        "Max Drawdown (%)": "Max Drawdown %",
+        "Win Rate (%)": "Win %",
+        "E[R] per Trade (%)": "E[R] per Trade %",
+    }
+    if metric_name in mapping:
+        return mapping[metric_name]
+    return metric_name.replace(" (%)", " %").strip()
+
+
+def _parse_faq_metric_definitions(path: Path) -> dict[str, str]:
+    """Extract Definition lines for performance metric tooltips from FAQ."""
+    text = path.read_text(encoding="utf-8")
+    section_match = re.search(
+        r"## What do the performance metrics(?:/KPIs)? mean\?\n(.*)",
+        text,
+        flags=re.DOTALL,
+    )
+    if not section_match:
+        return {}
+
+    section = section_match.group(1)
+    heading_re = re.compile(r"^\*\*(.+?)\*\*\s*$", flags=re.MULTILINE)
+    matches = list(heading_re.finditer(section))
+    out = {}
+    for i, m in enumerate(matches):
+        metric_name = m.group(1).strip()
+        block_start = m.end()
+        block_end = matches[i + 1].start() if i + 1 < len(matches) else len(section)
+        block = section[block_start:block_end]
+        definition_match = re.search(r"^Definition:\s*(.+)$", block, flags=re.MULTILINE)
+        if definition_match:
+            out[_normalize_metric_tooltip_key(metric_name)] = definition_match.group(1).strip()
+    return out
 
 
 # ═══════════════════════════════════════════════
@@ -164,23 +206,57 @@ def inject_css():
         background-color: transparent; font-weight: 600;
     }}
 
-    /* Selected strategy box — centered in tab bar row */
-    .selected-strat-bar {{
-        position: absolute; left: 50%; top: -42px; z-index: 100;
-        transform: translateX(-50%);
-        pointer-events: auto;
+    /* Top panel */
+    .top-header {{
+        background: {t["surface2"]};
+        border-top: 1px solid {t["border"]};
+        border-bottom: 1px solid {t["border"]};
+        margin: -0.5rem -1rem 0.5rem -1rem;
+        padding: 10px 20px;
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        align-items: center;
     }}
-
-    /* Slow gentle pulse on selected strategy text */
-    @keyframes gentle-pulse {{
-        0%, 100% {{ opacity: 1; }}
-        50% {{ opacity: 0.4; }}
+    .top-header-brand {{
+        font-family: 'Instrument Sans', 'Inter', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+        justify-self: start;
     }}
-    .selected-strat-bar span {{
-        animation: gentle-pulse 3s ease-in-out infinite;
+    .top-header-center {{
+        justify-self: center;
+        text-align: center;
     }}
-    .selected-strat-bar .tooltip-text {{
-        animation: none;
+    .top-dashboard-title {{
+        font-family: 'Instrument Sans', 'Inter', sans-serif;
+        color: {t["heading"]};
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }}
+    .selected-strat-line {{
+        margin-top: 0.2rem;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: {t["heading"]};
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.25;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: help;
+    }}
+    @media (max-width: 1200px) {{
+        .top-header {{
+            grid-template-columns: 1fr;
+            row-gap: 0.3rem;
+            text-align: center;
+        }}
+        .top-header-brand {{
+            justify-self: center;
+        }}
     }}
 
     /* Selectbox — compact inside heatmap column */
@@ -204,6 +280,9 @@ def inject_css():
     .block-container, .main .block-container,
     div[data-testid="stAppViewBlockContainer"] > div.block-container {{
         padding-top: 0.5rem !important; padding-bottom: 0 !important;
+        max-width: 1920px !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }}
     .stApp {{ overflow: hidden; height: 100vh; }}
     .stMain, [data-testid="stMain"] {{ overflow-y: auto; height: 100vh; }}
@@ -223,7 +302,7 @@ def inject_css():
         background-color: {t["surface2"]}; color: {t["text"]};
         border: 1px solid {t["border"]}; border-radius: 6px;
         padding: 10px 14px; font-size: 0.78rem; line-height: 1.7;
-        width: 440px; position: absolute; z-index: 1000;
+        width: min(440px, 78vw); position: absolute; z-index: 1000;
         top: 110%; left: 50%; transform: translateX(-50%);
         white-space: pre-line; transition: opacity 0.15s; pointer-events: none;
     }}
@@ -305,22 +384,17 @@ def _strategy_number_map(results_df):
 
 
 def render_selected_label(key, strat_num, tips):
-    """Render selected strategy label, absolute-positioned centered in the tab bar."""
-    t = T()
+    """Build selected strategy HTML line with tooltip for top panel."""
     tip = tips.get("Selected Strategy", "")
-    st.markdown(
-        f'<div class="selected-strat-bar">'
-        f'<div class="tooltip-container" style="display:inline-block; '
-        f'padding:8px 0; cursor:help; white-space:nowrap;">'
-        f'<span style="color:{t["text"]};font-size:0.9rem;font-weight:500;">'
-        f'Bitcoin Breakout Strategy #{strat_num}</span>'
-        f'<span style="color:{t["text"]};font-size:0.9rem;font-weight:500;"> — </span>'
-        f'<span style="color:{t["text"]};font-size:0.9rem;font-weight:500;">'
-        f'Buy (x)={key[0]}, Sell (y)={key[1]}, Window (z)={key[2]}</span>'
-        f'<span style="color:{t["text"]};font-size:0.7rem;margin-left:6px;">ⓘ</span>'
+    return (
+        f'<div class="tooltip-container">'
+        f'<div class="selected-strat-line">'
+        f'Selected: Strategy #{strat_num}'
+        f'<span style="font-size:0.75rem;">ⓘ</span>'
+        f'</div>'
         f'<div class="tooltip-text">{tip}</div>'
-        f'</div></div>',
-        unsafe_allow_html=True)
+        f'</div>'
+    )
 
 
 # ═══════════════════════════════════════════════
@@ -556,12 +630,12 @@ def make_single_trade(trade, cd, sel_x=None, sel_y=None, height=270):
         height=height,
         font=base["font"], paper_bgcolor=base["paper_bgcolor"],
         plot_bgcolor=base["plot_bgcolor"],
-        margin=dict(l=50, r=10, t=50, b=25),
+        margin=dict(l=50, r=10, t=76, b=25),
         legend={**legend_cfg, "y": 1.0, "yanchor": "bottom"},
         title=dict(
             text=f"Trade #{trade['trade']}: {sign}{trade['return_pct']}% ({sign}${trade['pnl']:,.0f})",
             font=dict(color=clr, size=13),
-            x=0.5, xanchor="center", y=0.99, yanchor="bottom",
+            x=0.5, xanchor="center", y=0.98, yanchor="top",
         ),
         xaxis_rangeslider_visible=False, xaxis2_rangeslider_visible=False,
         shapes=[
@@ -664,8 +738,6 @@ def tab_strategies(results_df, all_strats, best_key, strat_num_map, tips):
     metric_keys = list(metric_map.keys())
     calmar_idx = next(i for i, k in enumerate(metric_keys) if "Calmar" in k)
 
-    render_selected_label(key, strat_num, tips)
-
     # ══ Row 1: Heatmap (with selectors) | Equity Curve | Drawdown ══
     col_hm, col_eq, col_dd = st.columns(3)
 
@@ -675,14 +747,12 @@ def tab_strategies(results_df, all_strats, best_key, strat_num_map, tips):
         dd_cols = st.columns([2, 1])
         with dd_cols[0]:
             sel_metric_label = st.selectbox(
-                "Performance Metric", metric_keys, index=calmar_idx,
-                help=tips.get("Strategy Heatmap", ""),
+                "Key Performance Indicator", metric_keys, index=calmar_idx,
                 key="hm_metric")
             sel_metric = metric_map[sel_metric_label]
         with dd_cols[1]:
             hm_win = st.selectbox("Window (z)", windows,
                                    index=windows.index(sel_win) if sel_win in windows else 0,
-                                   help=tips.get("Window (z)", ""),
                                    key="hm_window")
 
         fig_hm = make_heatmap(results_df, sel_metric, sel_metric_label, hm_win,
@@ -816,8 +886,6 @@ def tab_trades(all_strats, best_key, strat_num_map, tips):
     chart_data = strat["chart_data"]
     strat_num = strat_num_map.get(key, 0)
 
-    render_selected_label(key, strat_num, tips)
-
     _section_title("KPIs", tips)
     render_trades_kpis(metrics, tips)
 
@@ -894,31 +962,22 @@ def main():
         st.session_state.sel_trade_idx = 0
     inject_css()
 
-    # ══ Bloomberg-style top panel ══
-    t = T()
-    st.markdown(f"""
-<div style="background:#1A1310; padding:5px 20px; font-size:0.72rem; border-bottom:1px solid #333;
-            display:flex; align-items:center; gap:0; margin:-0.5rem -1rem 0 -1rem;">
-  <span style="color:{t['text']};">
-    Kaila the Company &amp; Its Products ▾</span>
-  <span style="color:#555; margin:0 8px;">|</span>
-  <span style="color:{t['text']};">Kaila Terminal Demo Request</span>
-  <span style="color:#555; margin:0 8px;">|</span>
-  <span style="color:#FF8C00;">🖥 Kaila Anywhere Remote Login</span>
-  <span style="color:#555; margin:0 8px;">|</span>
-  <span style="color:{t['text']};">Kaila Customer Support</span>
-</div>
-<div style="background:#000; padding:10px 20px; display:flex; justify-content:space-between;
-            align-items:center; margin:0 -1rem 0.4rem -1rem;">
-  <span style="font-family:'Instrument Sans','Inter',sans-serif; font-size:1.6rem;
-              color:#fff; letter-spacing:-0.02em;">Kaila</span>
-  <div style="display:flex; align-items:center; gap:16px; font-size:0.78rem; color:{t['text']};">
-    <span>Sign In</span>
-    <span style="border:1px solid #555; padding:3px 12px; border-radius:2px;">Subscribe</span>
-    <span>🔍</span>
+    selected_key = (st.session_state.sel_x, st.session_state.sel_y, st.session_state.sel_win)
+    selected_strat_num = strat_num_map.get(selected_key, 0)
+    selected_html = render_selected_label(selected_key, selected_strat_num, tips)
+    st.markdown(
+        f"""
+<div class="top-header">
+  <div class="top-header-brand">Kaila</div>
+  <div class="top-header-center">
+    <div class="top-dashboard-title">Bitcoin Breakout Strategy</div>
+    {selected_html}
   </div>
+  <div></div>
 </div>
-""", unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
     tab1, tab2, tab3 = st.tabs(["Strategies", "Trades", "FAQ"])
     with tab1:
@@ -927,12 +986,6 @@ def main():
         tab_trades(all_strats, best_key, strat_num_map, tips)
     with tab3:
         tab_faq(faq_content)
-
-    st.markdown(f"""
-<div style="text-align:center; color:{T()['text_muted']}; font-size:0.72rem; padding:4px 0;">
-Mikko Kaila<br>2026
-</div>""", unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()

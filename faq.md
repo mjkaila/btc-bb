@@ -1,94 +1,89 @@
+## Key takeaways
+
+**Best strategy:** Strategy #33 — shown as default and selected by highest Calmar Ratio over the backtest period (2021-2025) (see Strategy Heatmap or Table).
+
+**Return vs benchmark:** Strategy total return 768.5% vs. buy-and-hold Bitcoin 197.9% over the same period (see Strategy Table).
+
+**Risk:** Strategy maximum drawdown 34.5% vs. buy-and-hold Bitcoin 76.6% (see Drawndown chart).
+
+The "best" strategy depends on user preferences. E.g, if a drawdown of 34.5% was too steep, Strategy #125 (second highest Calmar Ratio) would offer a maximum drawdown of 18.7%. As the tradeoff, strategy return would drop to 196.8% (vs. 768.5%).
+
+The user can explore 125 strategy variants in the app using various *(x,y,z)* parameter combinations and KPIs.
+
 ## What's the purpose of this application?
 
-The application presents a systematic, rules-based trading strategy inspired by Bollinger Bands. The purpose is to explore whether active, rules-based trading can improve risk-adjusted returns compared to a simple buy-and-hold approach.
+The application presents a systematic, rules-based trading strategy. The purpose is to explore whether active, rules-based trading can improve risk-adjusted returns compared to a simple buy-and-hold approach. 
 
-**Key Characteristics**
+The app is developed using agentic AI tools (Perplexity Computer and Cursor).
 
-- Long-only, fully invested or fully out (no partial exposures).
-- No leverage.
-- Initial capital: $100,000.
-- Benchmark asset: Bitcoin (buy-and-hold)
-- Not investment advice.
+## What's the trading strategy?
 
-**Data**
+The core idea is to participate in upward market moves while avoiding prolonged drawdowns.
 
-- Daily BTC-USD OHLCV data sourced from Yahoo Finance.
-- 1,826 daily bars from 2021-01-01 to 2025-12-31.
+**Bollinger Bands**
 
-## What's the Strategy?
+The strategy is inspired by Bollinger Bands, volatility bands built around a moving average. Standard Bollinger Bands use a 20-day simple moving average of close prices as the Middle. Upper and Lower Bands are defined as Middle ± 2 standard deviations.
 
-The trading strategy is based on Bollinger Bands, volatility bands built around a moving average. The core idea is to participate in upward market moves while avoiding prolonged drawdowns.
+The application has parameters for the entry *(x)* and exit *(y)* band multipliers as well as the moving average window length in days *(z)*.
 
-Standard Bollinger Bands use a 20-day simple moving average of close prices as the Middle. Upper and Lower Bands are defined as Middle ± 2 standard deviations.
-
-The application has parameters for the entry *(x)* and exit *(y)* multipliers as well as the moving average window length in days *(z)*.
-
-- Middle μ = Simple Moving Average of Close Prices of Last *z* Days
-- Entry Band = μ + *x* · σ
-- Exit Band = μ + *y* · σ
-
-The user can explore which strategy (the combination of *x*, *y* , and *z* parameters) has the best performance. 
-
-The user can optimize for various performance metrics such as annualized returns (CAGR), risk-adjusted returns (Calmar Ratio), or Expected Return per Trade.
-
-&nbsp;
+- Rolling mean: $\mu_t$ over window $z$ days.
+- Rolling standard deviation: $\sigma_t$ over window $z$ days.
+- Entry band: $\mu_t + x\sigma_t$
+- Exit band: $\mu_t + y\sigma_t$
 
 **Entry & Exit Criteria**
 
-Buy signal (day T): 1. Close price crosses above the entry band and 2. Open price of the next day (T+1) is above the Low price of day T.
+Buy signal (day T): 
 
-Sell signal (day T): 1. Close price crosses below the exit band or 2. Close price falls below the stop loss.
+* Close price crosses above the entry band and
+* Open price of the next day (T+1) is above the low price.
 
-Execution (day T+1): Both entries and exits execute at the next-day open price, avoiding look-ahead bias.
+Sell signal (day T): 
 
-Stop loss: When entering a trade on day T+1, the stop loss is set to the low price of day T. The stop loss remains fixed for the duration of the trade.
+* Close price crosses below the exit band or
+* Close price falls below the stop loss.
 
+Execution (day T+1):
 
-## What's Strategy Heatmap?
+* Both entries and exits execute at the next-day open price, avoiding look-ahead bias.
 
-Grid of all strategy variants for one window length. Each cell shows a performance metric for a unique (x, y) combination. Click any cell to select that strategy.
+Stop loss:
 
-Use the Performance Metric dropdown to switch between different metrics (e.g. Calmar Ratio, Strategy Return, Max Drawdown). Use the Window (z) dropdown to view heatmaps for different moving average window lengths.
+* When entering the trade at the open of day T+1, the stop loss is set to the low of previous day T. The stop loss remains fixed for the duration of trade.
 
-## What's Equity Curve?
+&nbsp;
 
-Growth of the portfolio indexed to start = 1. Index = 10 means the final equity is 10× compared to start equity. Index = 0 means all equity would have been lost.
+## What do the KPIs (risk and performance metrics) mean?
 
-The solid gold line represents the selected strategy. The dotted grey line represents the buy-and-hold benchmark (BTC-USD). Comparing the two lines reveals whether active trading outperformed simply holding the asset.
+**Risk and Performance Analysis**
 
-## What's Drawdown?
+The user can explore various KPIs on the Strategies and Trades tabs.
 
-Peak-to-trough decline in portfolio equity, expressed as a percentage. Drawdown = −20 means the equity has dropped 20% from its peak.
+There are 125 strategy variants, ie., combinations of *x*, *y*, and *z* parameters. 
 
-The red area represents the selected strategy's drawdown over time. The dotted grey line shows the buy-and-hold benchmark's drawdown. Shallower drawdowns indicate better capital preservation during adverse market conditions.
+*x*, *y*, and *z* each can get 5 values, totaling 5 * 5 * 5 = 125 strategies.
 
-## What's Strategy Table?
+The user can optimize for various KPIs such as annualized returns (CAGR), risk-adjusted returns (Calmar Ratio), and Expected Return per Trade according to her preferences, e.g., risk tolerance.
 
-All 125 strategy variants ranked by Calmar Ratio. Click any row to select that strategy. The heatmap, equity curve, and drawdown chart update accordingly.
-
-The application evaluates strategy variants by combining 5 moving average window lengths with 5 entry and 5 exit thresholds. In total, 5 × 5 × 5 = 125 strategy variants (x, y, z parameter combinations) are tested.
-
-By default, the application displays the results of best-performing strategy as measured by the Calmar Ratio (a measure of risk-adjusted returns).
-
-## What do the performance metrics mean?
+&nbsp;  
 
 **Strategy Return (%)**
 
 Definition: Compounded total return of the strategy (2021-2025).
 
-Example: 500% means $100k grew to $600k.
+Example: 500% means starting equity of 100,000 USD grew to 600,000 USD.
 
-Formula: (Final Equity / Initial Equity − 1) × 100
+$R_{\text{strategy}}(\%) = \left(\frac{V_T}{V_0} - 1\right)\times 100$
 
 &nbsp;
 
 **Benchmark Return (%)**
 
-Definition: Compounded total return of the benchmark asset (2021-2025).
+Definition: Compounded total return of Bitcoin (2021-2025).
 
 Example: 197.9% means the value of Bitcoin nearly tripled.
 
-Formula: (Final Price / Initial Price − 1) × 100
+$R_{\text{benchmark}}(\%) = \left(\frac{P_T}{P_0} - 1\right)\times 100$
 
 &nbsp;
 
@@ -98,7 +93,7 @@ Definition: Sensitivity of strategy returns to benchmark returns. Measures how m
 
 Example: Beta = 0.5 means when Bitcoin moves 1%, the strategy tends to move 0.5%.
 
-Formula: β = Cov(R_strategy, R_benchmark) / Var(R_benchmark)
+$\beta = \frac{\operatorname{Cov}(r_s, r_b)}{\operatorname{Var}(r_b)}$
 
 &nbsp;
 
@@ -108,27 +103,27 @@ Definition: Annualized excess return unexplained by benchmark exposure. Measures
 
 Example: Alpha = 0.48 means 48% annualized excess return.
 
-Formula: α = R_strategy − [R_f + β × (R_benchmark − R_f)], annualized
+$\alpha_{\text{ann}} = \left(1 + \overline{(r_s-r_f)-\beta(r_b-r_f)}\right)^N - 1$
 
 &nbsp;
 
 **CAGR (%)**
 
-Definition: Compounded Annual Growth Rate, or, annualized geometric growth rate of the portfolio.
+Definition: Compounded Annual Growth Rate, ie., annualized geometric growth rate of the portfolio.
 
 Example: CAGR = 62.8% means the portfolio grew at 62.8% per year on average.
 
-Formula: (Final Equity / Initial Equity)^(1/years) − 1
+$\operatorname{CAGR}(\%) = \left[\left(\frac{V_T}{V_0}\right)^{1/Y} - 1\right]\times 100$
 
 &nbsp;
 
 **Max Drawdown (%)**
 
-Definition: Worst peak-to-trough decline in portfolio equity during the backtest period (2021-2025).
+Definition: Worst peak-to-trough decline in portfolio equity (2021-2025).
 
 Example: Max DD = 35.3 means the portfolio fell 35.3% from its highest point.
 
-Formula: Max over t of (Peak_Equity_t − Equity_t) / Peak_Equity_t × 100
+$\operatorname{MDD}(\%) = \min_t\left(\frac{V_t - \max_{\tau \le t}V_{\tau}}{\max_{\tau \le t}V_{\tau}}\right)\times 100$
 
 &nbsp;
 
@@ -138,17 +133,17 @@ Definition: Risk-adjusted return ratio. Higher values indicate better return per
 
 Example: Calmar = 1.78 means the annual return is 1.78× the max drawdown.
 
-Formula: CAGR / |Max Drawdown|
+$\operatorname{Calmar} = \frac{\operatorname{CAGR}}{|\operatorname{MDD}|}$
 
 &nbsp;
 
 **Trades**
 
-Definition: Total number of completed round-trip trades over the backtest period (2021-2025).
+Definition: Total number of completed round-trip trades (2021-2025).
 
 Example: Trades = 106 means 106 buy-then-sell cycles.
 
-Formula: Count of all closed positions
+$N_{\text{trades}} = \sum_{i=1}^{n}\mathbf{1}_{\{\text{trade } i \text{ closed}\}}$
 
 &nbsp;
 
@@ -158,7 +153,7 @@ Definition: Percentage of trades with positive return.
 
 Example: Win Rate = 57.5% means 57.5 out of 100 trades were profitable.
 
-Formula: Winning Trades / Total Trades × 100
+$\operatorname{WinRate}(\%) = \frac{N_{\text{wins}}}{N_{\text{trades}}}\times 100$
 
 &nbsp;
 
@@ -168,7 +163,7 @@ Definition: Ratio of average winning return to average losing return.
 
 Example: Win/Loss = 1.94 means average winners are 1.94× larger than average losers.
 
-Formula: |Average Win %| / |Average Loss %|
+$\operatorname{W/L} = \frac{|\overline{r}_{\text{win}}|}{|\overline{r}_{\text{loss}}|}$
 
 &nbsp;
 
@@ -176,9 +171,9 @@ Formula: |Average Win %| / |Average Loss %|
 
 Definition: Ratio of gross profit to gross loss in dollar terms.
 
-Example: Profit Factor = 2.31 means gross profits are 2.31× gross losses.
+Example: Profit Factor = 2.31 means gross profits are 2.31 times gross losses (same currency terms).
 
-Formula: Gross Profit ($) / Gross Loss ($)
+$\operatorname{PF} = \frac{\sum \text{Profit}_i^{+}}{\left|\sum \text{Loss}_j^{-}\right|}$
 
 &nbsp;
 
@@ -188,4 +183,14 @@ Definition: Expected Return per Trade.
 
 Example: E[R] = 2.8% means each trade is expected to return 2.8% on average.
 
-Formula: (Win Rate × Avg Win %) + (Loss Rate × Avg Loss %)
+$\mathbb{E}[R](\%) = p_{\text{win}}\overline{r}_{\text{win}} + p_{\text{loss}}\overline{r}_{\text{loss}}$
+
+## Limitations and assumptions
+
+- **Not investment advice.** Educational demo only; past performance does not predict future returns.
+- **No fees, slippage, or funding.** Results assume frictionless execution at stated prices; real trading would reduce net returns.
+- **Parameter search is exploratory.** The study explores in-sample performance, it's not a claim of out-of-sample performance.
+- **Capital:** Fixed 100 000 USD initial equity; long-only; no leverage; no partial sizing.
+- **Execution:** Entries and exits at next-day open after signal; no look-ahead bias.
+- **Benchmark:** Buy-and-hold Bitcoin.
+- **Data:** Daily BTC-USD OHLCV data from Yahoo Finance. Total 1,826 daily bars from 2021-01-01 to 2025-12-31.
