@@ -583,24 +583,32 @@ def make_single_trade(trade, cd, sel_x=None, sel_y=None, height=270):
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                         row_heights=[0.75, 0.25])
 
+    # legendrank: lower = higher in legend. Desired order: Buy, Sell, Entry, Exit, Stop, BB.
+    _LR_BUY, _LR_SELL, _LR_ENTRY, _LR_EXIT, _LR_STOP, _LR_BB = 1, 2, 3, 4, 5, 6
+
     bb_alpha = t["bb_fill_alpha"]
     if cd.get("bb_upper") and cd.get("bb_lower"):
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["bb_upper"][sl], name="BB Upper",
                                  line=dict(color="rgba(0,0,0,0)", width=0), showlegend=False), row=1, col=1)
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["bb_lower"][sl], name="Standard Bollinger Bands (±2σ)",
+                                 legendrank=_LR_BB,
                                  fill="tonexty", fillcolor=f"rgba({mr},{mg},{mb},{bb_alpha})",
                                  line=dict(color="rgba(0,0,0,0)", width=0)), row=1, col=1)
 
     band_color = t["marker_buy_sell"]
     if x_eq_y:
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["entry_band"][sl], name="Entry Band",
+                                 legendrank=_LR_ENTRY,
                                  line=dict(color=band_color, width=1.2)), row=1, col=1)
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["exit_band"][sl], name="Exit Band",
+                                 legendrank=_LR_EXIT,
                                  line=dict(color=band_color, width=1.2, dash="dash")), row=1, col=1)
     else:
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["exit_band"][sl], name="Exit Band",
+                                 legendrank=_LR_EXIT,
                                  line=dict(color=band_color, width=1.2, dash="dash")), row=1, col=1)
         fig.add_trace(go.Scatter(x=dates[sl], y=cd["entry_band"][sl], name="Entry Band",
+                                 legendrank=_LR_ENTRY,
                                  line=dict(color=band_color, width=1.2)), row=1, col=1)
 
     # Stop loss line — ONLY until exit day
@@ -615,6 +623,7 @@ def make_single_trade(trade, cd, sel_x=None, sel_y=None, height=270):
                 sl_y_pts.append(v)
         if sl_x_pts:
             fig.add_trace(go.Scatter(x=sl_x_pts, y=sl_y_pts, name="Stop Loss",
+                                     legendrank=_LR_STOP,
                                      line=dict(color=t["red"], width=1.2, dash="dot"),
                                      mode="lines"), row=1, col=1)
 
@@ -623,11 +632,13 @@ def make_single_trade(trade, cd, sel_x=None, sel_y=None, height=270):
     marker_color = t["marker_buy_sell"]
     fig.add_trace(go.Scatter(
         x=[exit_date], y=[trade["exit_price"]], mode="markers+text", name="Sell",
+        legendrank=_LR_SELL,
         marker=dict(symbol="triangle-down", size=12, color=marker_color),
         text=[f"Sell ${trade['exit_price']:,.0f}"], textposition="bottom center",
         textfont=dict(size=10, color=marker_color)), row=1, col=1)
     fig.add_trace(go.Scatter(
         x=[entry_date], y=[trade["entry_price"]], mode="markers+text", name="Buy",
+        legendrank=_LR_BUY,
         marker=dict(symbol="triangle-up", size=12, color=marker_color),
         text=[f"Buy ${trade['entry_price']:,.0f}"], textposition="top center",
         textfont=dict(size=10, color=marker_color)), row=1, col=1)
@@ -637,7 +648,7 @@ def make_single_trade(trade, cd, sel_x=None, sel_y=None, height=270):
     cr, cg, cb = _hex_to_rgb(clr)
 
     base = _base_layout()
-    legend_cfg = {**base["legend"], "traceorder": "reversed"}
+    legend_cfg = {**base["legend"], "traceorder": "normal"}
     fig.update_layout(
         height=height,
         font=base["font"], paper_bgcolor=base["paper_bgcolor"],
