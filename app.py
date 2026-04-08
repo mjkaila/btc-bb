@@ -97,15 +97,18 @@ def _normalize_metric_tooltip_key(metric_name: str) -> str:
 def _parse_faq_metric_definitions(path: Path) -> dict[str, str]:
     """Extract Definition lines for performance metric tooltips from FAQ."""
     text = path.read_text(encoding="utf-8")
-    section_match = re.search(
+    section_patterns = [
+        r"## What do the KPIs \(risk and performance metrics\) mean\?\n(.*)",
         r"## What do the performance metrics(?:/KPIs)? mean\?\n(.*)",
-        text,
-        flags=re.DOTALL,
-    )
-    if not section_match:
+    ]
+    section = None
+    for pat in section_patterns:
+        m = re.search(pat, text, flags=re.DOTALL)
+        if m:
+            section = m.group(1)
+            break
+    if section is None:
         return {}
-
-    section = section_match.group(1)
     heading_re = re.compile(r"^\*\*(.+?)\*\*\s*$", flags=re.MULTILINE)
     matches = list(heading_re.finditer(section))
     out = {}
@@ -161,11 +164,11 @@ def inject_css():
     p, li, span {{ color: {t["text"]}; }}
 
     /* KPI cards */
-    .kpi-container {{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0; }}
+    .kpi-container {{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0; overflow: visible; }}
     .kpi-card {{
         flex:1 1 80px; background:{t["surface"]}; border:1px solid {t["border"]};
         border-radius:6px; padding:6px 4px; text-align:center; min-width:70px;
-        position: relative; cursor: help;
+        position: relative; cursor: help; overflow: visible;
     }}
     .kpi-label {{
         font-size:0.5rem; color:{t["text_muted"]}; text-transform:uppercase;
@@ -179,9 +182,18 @@ def inject_css():
         background-color: {t["surface2"]}; color: {t["text"]};
         border: 1px solid {t["border"]}; border-radius: 6px;
         padding: 10px 14px; font-size: 0.75rem; line-height: 1.6;
-        width: 320px; position: absolute; z-index: 1000;
-        bottom: 110%; left: 50%; transform: translateX(-50%);
+        width: min(320px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+        box-sizing: border-box; position: absolute; z-index: 1000;
+        top: 100%; left: 50%; transform: translateX(-50%);
+        margin-top: 6px;
         white-space: pre-line; transition: opacity 0.15s; pointer-events: none;
+    }}
+    /* First/last cards in the strip: anchor tooltip so wide tips stay on-screen */
+    .kpi-container > .kpi-card:first-child .kpi-tip {{
+        left: 0; transform: none;
+    }}
+    .kpi-container > .kpi-card:last-child .kpi-tip {{
+        left: auto; right: 0; transform: none;
     }}
     .kpi-card:hover .kpi-tip {{ visibility: visible; opacity: 1; }}
 
